@@ -17,4 +17,8 @@ private:
 	void generateBishopMoves(std::vector<Move>& moves);
 	void generateQueenMoves(std::vector<Move>& moves);
 	void generateKingMoves(std::vector<Move>& moves);
+
+	void generateWhitePawnMoves(std::vector<Move>& moves);
+
+	void generateBlackPawnMoves(std::vector<Move>& moves);
 };
