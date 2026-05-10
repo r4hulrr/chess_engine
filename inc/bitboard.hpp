@@ -33,6 +33,9 @@ constexpr uint64_t FILE_F = FILE_A << 5;
 constexpr uint64_t FILE_G = FILE_A << 6;
 constexpr uint64_t FILE_H = FILE_A << 7;
 
+constexpr uint64_t NOT_FILE_A  = ~FILE_A;
+constexpr uint64_t NOT_FILE_H  = ~FILE_H;
+
 constexpr uint64_t RANK_1 = 0x00000000000000FFULL;
 constexpr uint64_t RANK_2 = RANK_1 << 8;
 constexpr uint64_t RANK_3 = RANK_1 << 16;
