@@ -19,8 +19,8 @@ private:
 	void generateKingMoves(std::vector<Move>& moves);
 
 	void generateWhitePawnMoves(std::vector<Move>& moves);
-
 	void generateBlackPawnMoves(std::vector<Move>& moves);
 
 	uint64_t rookAttacksFrom(int from, uint64_t occupied);
+	uint64_t bishopAttacksFrom(int from, uint64_t occupied);
 };
