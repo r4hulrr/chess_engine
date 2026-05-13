@@ -21,4 +21,6 @@ private:
 	void generateWhitePawnMoves(std::vector<Move>& moves);
 
 	void generateBlackPawnMoves(std::vector<Move>& moves);
+
+	uint64_t rookAttacksFrom(int from, uint64_t occupied);
 };

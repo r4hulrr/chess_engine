@@ -13,7 +13,30 @@ void MoveGen::generatePawnMoves(std::vector<Move>& moves){
 	else generateBlackPawnMoves(moves);
 }
 
-void MoveGen::generateRookMoves(std::vector<Move>& moves){}
+void MoveGen::generateRookMoves(std::vector<Move>& moves){
+	uint64_t rooks = board.pieces[board.turn][ROOK];
+	
+	// get current turn occupied
+	uint64_t own = (board.turn == WHITE) ? board.whiteOccupancy : board.blackOccupancy;
+
+	uint64_t enemy = (board.turn == WHITE) ? board.blackOccupancy : board.whiteOccupancy;
+
+	while(rooks){
+		int from = popLSB(rooks);
+
+		uint64_t targets = rookAttacksFrom(from, board.occupied);
+		// remove targets that attack own pieces
+		targets &= ~own;
+
+		while (targets){
+			int to = popLSB(targets);
+
+			MoveFlag = ((1ULL << to) && enemy) ? CAPTURE : QUIET;
+
+			moves.emplace_back(makeMove(from, to, ROOK, flag));
+		}
+	}
+}
 
 void MoveGen::generateKnightMoves(std::vector<Move>& moves){}
 
@@ -160,5 +183,41 @@ void MoveGen::generateWhitePawnMoves(std::vector<Move>& moves){
 		int from = to - 9;
 		moves.emplace_back(makeMove(from, to, PAWN, PROMOTION));
 	}
+}
+
+uint64_t MoveGen::rookAttacksFrom(int from, uint64_t occupied){
+	// get rank and file
+	int r = from / 8;
+	int f = from % 8;
+
+	uint64_t attacks = 0;
+	
+	// in all directions
+	for(int i = r + 1; i < 8 ; i++){
+		// get the move
+		int shift = i*8 + f;
+		attacks |= 1ULL << shift;
+		if ((1ULL << shift) & occupied) break;
+	}
+
+	for(int i = r - 1; i >= 0; i--){
+		int shift = i*8 + f;
+		attacks |= 1ULL << shift;
+		if ((1ULL << shift) & occupied) break;
+	}
+
+	for(int i = f + 1; i < 8; i++){
+		int shift = r*8 + i;
+		attacks |= 1ULL << shift;
+		if ((1ULL << shift) & occupied) break;
+	}
+
+	for(int i = f - 1; i >= 0; i--){
+		int shift = r*8 + i;
+		attacks |= 1ULL << shift;
+		if ((1ULL << shift) & occupied) break;
+	}
+
+	return attacks;
 }
 
