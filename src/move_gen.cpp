@@ -4,6 +4,9 @@ std::vector<Move> MoveGen::generateMoves(){
 	std::vector<Move> moves;
 
 	generatePawnMoves(moves);
+	generateRookMoves(moves);
+	generateBishopMoves(moves);
+	generateQueenMoves(moves);
 
 	return moves;
 };
@@ -38,7 +41,27 @@ void MoveGen::generateRookMoves(std::vector<Move>& moves){
 	}
 }
 
-void MoveGen::generateKnightMoves(std::vector<Move>& moves){}
+void MoveGen::generateKnightMoves(std::vector<Move>& moves){
+	uint64_t knights = board.pieces[board.turn][KNIGHT];
+
+	uint64_t own = (board.turn == WHITE) ? board.whiteOccupancy : board.blackOccupancy;
+
+	uint64_t enemy = (board.turn == WHITE) ? board.blackOccupancy : board.whiteOccupancy;
+
+	while(knights){
+		int from = popLSB(knights);
+
+		uint64_t targets = KNIGHT_ATTACKS[from] & ~own;
+
+		while(targets){
+			int to = popLSB(targets);
+
+			MoveFlag flag = ((1ULL << to) && enemy) ? CAPTURE : QUIET;
+
+			moves.emplace_back(makeMove(from, to, KNIGHT, flag));
+		}
+	}
+}
 
 void MoveGen::generateBishopMoves(std::vector<Move>& moves){
 	uint64_t bishops = board.pieces[board.turn][BISHOP];
@@ -56,7 +79,7 @@ void MoveGen::generateBishopMoves(std::vector<Move>& moves){
 		while(targets){
 			int to = popLSB(targets);
 
-			MoveFlag = ((1ULL << to) && enemy) ? CAPTURE : QUIET;
+			MoveFlag flag = ((1ULL << to) && enemy) ? CAPTURE : QUIET;
 
 			moves.emplace_back(makeMove(from, to, BISHOP, flag));
 
@@ -64,7 +87,29 @@ void MoveGen::generateBishopMoves(std::vector<Move>& moves){
 	}
 }
 
-void MoveGen::generateQueenMoves(std::vector<Move>& moves){}
+void MoveGen::generateQueenMoves(std::vector<Move>& moves){
+
+	uint64_t queen = board.pieces[board.turn][QUEEN];
+
+	uint64_t own = (board.turn == WHITE) ? board.whiteOccupancy : board.blackOccupancy;
+
+	uint64_t enemy = (board.turn == WHITE) ? board.blackOccupancy : board.whiteOccupancy;
+
+	int from = popLSB(queen);
+	
+	uint64_t targets = bishopAttacksFrom(from, board.occupied) | rookAttacksFrom(from, board.occupied);
+	targets &= ~own;
+
+	while(targets){
+		int to = popLSB(targets);
+
+		MoveFlag = ((1ULL << to) && enemy) ? CAPTURE : QUIET;
+
+		moves.emplace_back(makeMove(from, to, QUEEN, flag));
+
+	}
+
+}
 
 void MoveGen::generateKingMoves(std::vector<Move>& moves){}
 
