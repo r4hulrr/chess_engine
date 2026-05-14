@@ -103,15 +103,31 @@ void MoveGen::generateQueenMoves(std::vector<Move>& moves){
 	while(targets){
 		int to = popLSB(targets);
 
-		MoveFlag = ((1ULL << to) && enemy) ? CAPTURE : QUIET;
+		MoveFlag flag = ((1ULL << to) && enemy) ? CAPTURE : QUIET;
 
 		moves.emplace_back(makeMove(from, to, QUEEN, flag));
 
 	}
-
 }
 
-void MoveGen::generateKingMoves(std::vector<Move>& moves){}
+void MoveGen::generateKingMoves(std::vector<Move>& moves){
+	
+	uint64_t king = board.pieces[board.turn][KING];
+
+	uint64_t own = (board.turn == WHITE) ? board.whiteOccupancy : board.blackOccupancy;
+
+	uint64_t enemy = (board.turn == WHITE) ? board.blackOccupancy : board.whiteOccupancy;
+
+	uint64_t targets = KING_ATTACKS[king] & ~own;
+
+	while(targets){
+		int to = popLSB(target);
+
+		MoveFlag flag = ((1ULL << to) && empty) ? CAPTURE : EMPTY;
+
+		moves.emplace_back(makeMove(king, to, KING, flag));
+	}
+}
 
 uint64_t MoveGen::bishopAttacksFrom(int from, uint64_t occupied){
 	
