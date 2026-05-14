@@ -7,6 +7,8 @@ std::vector<Move> MoveGen::generateMoves(){
 	generateRookMoves(moves);
 	generateBishopMoves(moves);
 	generateQueenMoves(moves);
+	generateKnightMoves(moves);
+	generateKingMoves(moves);
 
 	return moves;
 };
@@ -34,7 +36,7 @@ void MoveGen::generateRookMoves(std::vector<Move>& moves){
 		while (targets){
 			int to = popLSB(targets);
 
-			MoveFlag = ((1ULL << to) && enemy) ? CAPTURE : QUIET;
+			MoveFlag flag = ((1ULL << to) & enemy) ? CAPTURE : QUIET;
 
 			moves.emplace_back(makeMove(from, to, ROOK, flag));
 		}
@@ -56,7 +58,7 @@ void MoveGen::generateKnightMoves(std::vector<Move>& moves){
 		while(targets){
 			int to = popLSB(targets);
 
-			MoveFlag flag = ((1ULL << to) && enemy) ? CAPTURE : QUIET;
+			MoveFlag flag = ((1ULL << to) & enemy) ? CAPTURE : QUIET;
 
 			moves.emplace_back(makeMove(from, to, KNIGHT, flag));
 		}
@@ -79,7 +81,7 @@ void MoveGen::generateBishopMoves(std::vector<Move>& moves){
 		while(targets){
 			int to = popLSB(targets);
 
-			MoveFlag flag = ((1ULL << to) && enemy) ? CAPTURE : QUIET;
+			MoveFlag flag = ((1ULL << to) & enemy) ? CAPTURE : QUIET;
 
 			moves.emplace_back(makeMove(from, to, BISHOP, flag));
 
@@ -95,18 +97,20 @@ void MoveGen::generateQueenMoves(std::vector<Move>& moves){
 
 	uint64_t enemy = (board.turn == WHITE) ? board.blackOccupancy : board.whiteOccupancy;
 
-	int from = popLSB(queen);
-	
-	uint64_t targets = bishopAttacksFrom(from, board.occupied) | rookAttacksFrom(from, board.occupied);
-	targets &= ~own;
+	while (queens){
+		int from = popLSB(queen);
+		
+		uint64_t targets = bishopAttacksFrom(from, board.occupied) | rookAttacksFrom(from, board.occupied);
+		targets &= ~own;
 
-	while(targets){
-		int to = popLSB(targets);
+		while(targets){
+			int to = popLSB(targets);
 
-		MoveFlag flag = ((1ULL << to) && enemy) ? CAPTURE : QUIET;
+			MoveFlag flag = ((1ULL << to) & enemy) ? CAPTURE : QUIET;
 
-		moves.emplace_back(makeMove(from, to, QUEEN, flag));
+			moves.emplace_back(makeMove(from, to, QUEEN, flag));
 
+		}
 	}
 }
 
@@ -118,12 +122,13 @@ void MoveGen::generateKingMoves(std::vector<Move>& moves){
 
 	uint64_t enemy = (board.turn == WHITE) ? board.blackOccupancy : board.whiteOccupancy;
 
-	uint64_t targets = KING_ATTACKS[king] & ~own;
+	int from = popLSB(king);
+	uint64_t targets = KING_ATTACKS[from] & ~own;
 
 	while(targets){
-		int to = popLSB(target);
+		int to = popLSB(targets);
 
-		MoveFlag flag = ((1ULL << to) && empty) ? CAPTURE : EMPTY;
+		MoveFlag flag = ((1ULL << to) & enemy) ? CAPTURE : QUIET;
 
 		moves.emplace_back(makeMove(king, to, KING, flag));
 	}
@@ -139,7 +144,7 @@ uint64_t MoveGen::bishopAttacksFrom(int from, uint64_t occupied){
 
 	// all directions
 	// north east
-	for(int rr = r + 1, int ff = ff + 1; 
+	for(int rr = r + 1, ff = ff + 1; 
 		rr < 8 && ff < 8;
 		rr++, ff++){
 	
@@ -150,7 +155,7 @@ uint64_t MoveGen::bishopAttacksFrom(int from, uint64_t occupied){
 	}
 
 	// north west
-	for(int rr = r + 1, int ff = ff - 1;
+	for(int rr = r + 1, ff = ff - 1;
 		rr < 8 && ff >= 0;
 		rr++, ff--){
 		
@@ -161,23 +166,23 @@ uint64_t MoveGen::bishopAttacksFrom(int from, uint64_t occupied){
 	}
 
 	// south east
-	for(int rr = r - 1, int ff = ff + 1;
+	for(int rr = r - 1, ff = ff + 1;
 		rr >= 0 && ff < 8;
 		rr--, ff++){
 		
 		int shift = rr*8 + ff;
-		attacks = 1ULL << shift;
+		attacks |= 1ULL << shift;
 
 		if (occupied & (1ULL << shift)) break;
 	}
 
 	// south west
-	for(int rr = r - 1, int ff = ff -1;
+	for(int rr = r - 1, ff = ff -1;
 		rr >= 0 && ff >= 0;
 		rr--, ff--){
 		
 		int shift = rr*8 + ff;
-		attacks = 1ULL << shift;
+		attacks |= 1ULL << shift;
 
 		if (occupied & (1ULL << shift)) break;
 	}
