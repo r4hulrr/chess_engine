@@ -1,4 +1,4 @@
-#include "type.hpp"
+#include "types.hpp"
 
 #include <bit>
 
@@ -21,6 +21,10 @@ inline Move makeMove(int from, int to, Piece piece, MoveFlag flag){
 		piece,
 		flag
 	};
+}
+
+[[nodiscard]] constexpr Color opposite(Color c){
+	return c == WHITE ? BLACK ? WHITE;
 }
 
 // ranks and files

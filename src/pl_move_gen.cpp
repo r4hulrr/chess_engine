@@ -1,6 +1,6 @@
-#include "move_gen.hpp"
+#include "pl_move_gen.hpp"
 
-std::vector<Move> MoveGen::generateMoves(){
+std::vector<Move> PseudoLegalMoveGen::generatePlMoves(){
 	std::vector<Move> moves;
 
 	generatePawnMoves(moves);
@@ -13,12 +13,12 @@ std::vector<Move> MoveGen::generateMoves(){
 	return moves;
 };
 
-void MoveGen::generatePawnMoves(std::vector<Move>& moves){
+void PseudoLegalMoveGen::generatePawnMoves(std::vector<Move>& moves){
 	if (board.turn == WHITE) generateWhitePawnMoves(moves);
 	else generateBlackPawnMoves(moves);
 }
 
-void MoveGen::generateRookMoves(std::vector<Move>& moves){
+void PseudoLegalMoveGen::generateRookMoves(std::vector<Move>& moves){
 	uint64_t rooks = board.pieces[board.turn][ROOK];
 	
 	// get current turn occupied
@@ -43,7 +43,7 @@ void MoveGen::generateRookMoves(std::vector<Move>& moves){
 	}
 }
 
-void MoveGen::generateKnightMoves(std::vector<Move>& moves){
+void PseudoLegalMoveGen::generateKnightMoves(std::vector<Move>& moves){
 	uint64_t knights = board.pieces[board.turn][KNIGHT];
 
 	uint64_t own = (board.turn == WHITE) ? board.whiteOccupancy : board.blackOccupancy;
@@ -65,7 +65,7 @@ void MoveGen::generateKnightMoves(std::vector<Move>& moves){
 	}
 }
 
-void MoveGen::generateBishopMoves(std::vector<Move>& moves){
+void PseudoLegalMoveGen::generateBishopMoves(std::vector<Move>& moves){
 	uint64_t bishops = board.pieces[board.turn][BISHOP];
 
 	uint64_t own = (board.turn == WHITE) ? board.whiteOccupancy : board.blackOccupancy;
@@ -89,7 +89,7 @@ void MoveGen::generateBishopMoves(std::vector<Move>& moves){
 	}
 }
 
-void MoveGen::generateQueenMoves(std::vector<Move>& moves){
+void PseudoLegalMoveGen::generateQueenMoves(std::vector<Move>& moves){
 
 	uint64_t queen = board.pieces[board.turn][QUEEN];
 
@@ -97,7 +97,7 @@ void MoveGen::generateQueenMoves(std::vector<Move>& moves){
 
 	uint64_t enemy = (board.turn == WHITE) ? board.blackOccupancy : board.whiteOccupancy;
 
-	while (queens){
+	while (queen){
 		int from = popLSB(queen);
 		
 		uint64_t targets = bishopAttacksFrom(from, board.occupied) | rookAttacksFrom(from, board.occupied);
@@ -114,7 +114,7 @@ void MoveGen::generateQueenMoves(std::vector<Move>& moves){
 	}
 }
 
-void MoveGen::generateKingMoves(std::vector<Move>& moves){
+void PseudoLegalMoveGen::generateKingMoves(std::vector<Move>& moves){
 	
 	uint64_t king = board.pieces[board.turn][KING];
 
@@ -130,67 +130,11 @@ void MoveGen::generateKingMoves(std::vector<Move>& moves){
 
 		MoveFlag flag = ((1ULL << to) & enemy) ? CAPTURE : QUIET;
 
-		moves.emplace_back(makeMove(king, to, KING, flag));
+		moves.emplace_back(makeMove(from, to, KING, flag));
 	}
 }
 
-uint64_t MoveGen::bishopAttacksFrom(int from, uint64_t occupied){
-	
-	// get rank and file
-	uint64_t r = from / 8;
-	uint64_t f = from % 8;
-
-	uint64_t attacks = 0;
-
-	// all directions
-	// north east
-	for(int rr = r + 1, ff = ff + 1; 
-		rr < 8 && ff < 8;
-		rr++, ff++){
-	
-		int shift = rr*8 + ff;
-		attacks |= 1ULL << shift;
-
-		if (occupied & (1ULL << shift)) break;
-	}
-
-	// north west
-	for(int rr = r + 1, ff = ff - 1;
-		rr < 8 && ff >= 0;
-		rr++, ff--){
-		
-		int shift = rr*8 + ff;
-		attacks |= 1ULL << shift;
-
-		if (occupied & (1ULL << shift)) break;
-	}
-
-	// south east
-	for(int rr = r - 1, ff = ff + 1;
-		rr >= 0 && ff < 8;
-		rr--, ff++){
-		
-		int shift = rr*8 + ff;
-		attacks |= 1ULL << shift;
-
-		if (occupied & (1ULL << shift)) break;
-	}
-
-	// south west
-	for(int rr = r - 1, ff = ff -1;
-		rr >= 0 && ff >= 0;
-		rr--, ff--){
-		
-		int shift = rr*8 + ff;
-		attacks |= 1ULL << shift;
-
-		if (occupied & (1ULL << shift)) break;
-	}
-	
-	return attacks;
-}
-
-void MoveGen::generateBlackPawnMoves(std::vector<Move>& moves){ 
+void PseudoLegalMoveGen::generateBlackPawnMoves(std::vector<Move>& moves){ 
 
 	uint64_t pawns = board.pieces[board.turn][PAWN]; 
 	uint64_t empty = ~board.occupied;
@@ -260,7 +204,7 @@ void MoveGen::generateBlackPawnMoves(std::vector<Move>& moves){
 
 }
 
-void MoveGen::generateWhitePawnMoves(std::vector<Move>& moves){ 
+void PseudoLegalMoveGen::generateWhitePawnMoves(std::vector<Move>& moves){ 
 
 	uint64_t pawns = board.pieces[board.turn][PAWN]; 
 	uint64_t empty = ~board.occupied;
@@ -327,41 +271,5 @@ void MoveGen::generateWhitePawnMoves(std::vector<Move>& moves){
 		int from = to - 9;
 		moves.emplace_back(makeMove(from, to, PAWN, PROMOTION));
 	}
-}
-
-uint64_t MoveGen::rookAttacksFrom(int from, uint64_t occupied){
-	// get rank and file
-	int r = from / 8;
-	int f = from % 8;
-
-	uint64_t attacks = 0;
-	
-	// in all directions
-	for(int i = r + 1; i < 8 ; i++){
-		// get the move
-		int shift = i*8 + f;
-		attacks |= 1ULL << shift;
-		if ((1ULL << shift) & occupied) break;
-	}
-
-	for(int i = r - 1; i >= 0; i--){
-		int shift = i*8 + f;
-		attacks |= 1ULL << shift;
-		if ((1ULL << shift) & occupied) break;
-	}
-
-	for(int i = f + 1; i < 8; i++){
-		int shift = r*8 + i;
-		attacks |= 1ULL << shift;
-		if ((1ULL << shift) & occupied) break;
-	}
-
-	for(int i = f - 1; i >= 0; i--){
-		int shift = r*8 + i;
-		attacks |= 1ULL << shift;
-		if ((1ULL << shift) & occupied) break;
-	}
-
-	return attacks;
 }
 
