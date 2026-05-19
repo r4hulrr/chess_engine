@@ -82,6 +82,24 @@ void Board::makeMove(Move& move){
 			pieces[BLACK][ROOK] |= (1ULL << D8);
 		}
 	}
+	
+	// we need to reset en passant as its only valid for one move
+	enPassantSquare = -1;
+
+	if (move.flag == DOUBLE_PAWN_PUSH){
+		if (maker == WHITE) enPassantSquare = move.from + 8;
+		else enPassantSquare = move.from - 8;
+	}
+
+	if (move.flag == EN_PASSANT){
+		if (maker == WHITE){
+			int capturedSq = move.to - 8;
+			pieces[BLACK][PAWN] &= ~(1ULL << capturedSq);
+		}else{
+			int capturedSq = move.to + 8;
+			pieces[WHITE][PAWN] &= ~(1ULL << capturedSq);
+		}
+	}
 
 	// update castling rights if change in kings or rook position
 	if (move.piece == KING) {

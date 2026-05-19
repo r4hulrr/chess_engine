@@ -5,6 +5,7 @@ class Board{
 public:
 	uint64_t pieces[2][6];
 	uint8_t castlingRights;
+	int enPassantSquare{-1};
 	Color turn;
 
 	uint64_t whiteOccupancy;

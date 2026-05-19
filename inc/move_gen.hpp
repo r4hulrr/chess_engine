@@ -23,4 +23,6 @@ private:
 	void generateCastlingMoves(std::vector<Move>& moves);
 	void generateWhitePawnMoves(std::vector<Move>& moves);
 	void generateBlackPawnMoves(std::vector<Move>& moves);
+	void generateBlackEnPassant(std::vector<Move>& moves){
+	void generateWhiteEnPassant(std::vector<Move>& moves){
 };

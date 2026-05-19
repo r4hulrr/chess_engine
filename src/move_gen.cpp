@@ -253,6 +253,8 @@ void MoveGen::generateBlackPawnMoves(std::vector<Move>& moves){
 		moves.emplace_back(makeMove(from, to, PAWN, PROMOTION));
 	}
 
+	// handle en passant
+	generateBlackEnPassant(moves);
 }
 
 void MoveGen::generateWhitePawnMoves(std::vector<Move>& moves){ 
@@ -321,5 +323,49 @@ void MoveGen::generateWhitePawnMoves(std::vector<Move>& moves){
 		int to = popLSB(captureRightPromo);
 		int from = to - 9;
 		moves.emplace_back(makeMove(from, to, PAWN, PROMOTION));
+	}
+
+	generateWhiteEnPassant(moves);
+}
+
+void MoveGen::generateWhiteEnPassant(std::vector<Move>& moves){
+	if (board.enPassantSquare == -1) return;
+
+	uint64_t epB = 1ULL << board.enPassantSquare;
+	
+	// white pawn from left of captures right/up or left/up
+	
+	uint64_t fromLeft = (epB >> 9) & board.pieces[WHITE][PAWN];
+
+	uint64_t fromRight = (epB >> 7) & board.pieces[WHITE][PAWN];
+
+	while(fromLeft){
+		int from = popLSB(fromLeft);
+		moves.emplace_back(makeMove(from, board.enPassantSquare, PAWN, EN_PASSANT));
+	}
+
+	while(fromRight){
+		int from = popLSB(fromRight);
+		moves.emplace_back(makeMove(from, board.enPassantSquare, PAWN, EN_PASSANT));
+	}
+}
+
+void MoveGen::generateBlackEnPassant(std::vector<Move>& moves){
+	if (board.enPassantSquare == -1) return;
+
+	uint64_t epW = 1ULL << board.enPassantSquare;
+	
+	uint64_t fromLeft = (epW << 7) & board.pieces[BLACK][PAWN];
+
+	uint64_t fromRight = (epW << 9) & board.pieces[BLACK][PAWN];
+
+	while(fromLeft){
+		int from = popLSB(fromLeft);
+		moves.emplace_back(makeMove(from, board.enPassantSquare, PAWN, EN_PASSANT));
+	}
+
+	while(fromRight){
+		int from = popLSB(fromRight);
+		moves.emplace_back(makeMove(from, board.enPassantSquare, PAWN, EN_PASSANT));
 	}
 }
