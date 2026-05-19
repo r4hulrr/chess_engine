@@ -10,8 +10,10 @@ public:
 	uint64_t blackOccupancy;
 	uint64_t occupied;
 
-	[[nodiscard]] bool inCheck(Color side) const{}
+	[[nodiscard]] bool inCheck(Color side) const;
 
-	[[nodiscard]] bool isSquareAttacked(int sq, Color attacker) const {}
+	[[nodiscard]] bool isSquareAttacked(int sq, Color attacker) const;
+
+	void makeMove(const Move& move);
 };
 

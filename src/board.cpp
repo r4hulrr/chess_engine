@@ -1,6 +1,6 @@
 #include "board.hpp"
 
-[[nodiscard]] bool inCheck(Color side) const{
+[[nodiscard]] bool Board::inCheck(Color side) const{
 	const uint64_t king = pieces[side][KING];
 	const int kingSq = std::countr_zero(king);
 	return isSquareAttacked(kingSq, opposite(side));
@@ -41,3 +41,41 @@
 	return false;
 }
 
+void Board::makeMove(Move& move){
+	Color maker = turn;
+	Color defender = opposite(turn);
+
+	uint64_t from = 1ULL << move.from;
+	uint64_t to = 1ULL << move.to;
+
+	// remove piece from old position
+	pieces[maker][move.piece] &= ~from;
+	
+
+	// handle capture
+	if (move.flag == CAPTURE){
+		for(int p = PAWN; p <= KING ; p++){
+			if (pieces[defender][p] & to){
+				pieces[defender][p] &= ~to;
+				break;
+			}
+		}
+	}
+
+	// place moving piece on new position
+	pieces[maker][move.piece] |= to;
+
+	// update occupancies
+	whiteOccupancy = 0;
+	blackOccupancy = 0;
+
+	for (int p = PAWN; p <= KING; ++p) {
+		whiteOccupancy |= pieces[WHITE][p];
+		blackOccupancy |= pieces[BLACK][p];
+	}
+
+	occupied = whiteOccupancy | blackOccupancy;
+
+	// switch side
+	turn = defender;
+}

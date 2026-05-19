@@ -1,6 +1,20 @@
-#include "pl_move_gen.hpp"
+#include "move_gen.hpp"
 
-std::vector<Move> PseudoLegalMoveGen::generatePlMoves(){
+std::vector<Move> MoveGen::generateMoves(){
+	std::vector<Move> pl_moves = generatePlMoves();
+	std::vector<Move> moves;
+
+	for(const Move& m : pl_moves){
+		Board next = board;
+		next.makeMove(m)
+
+		if (!next.inCheck(board.turn)) legal.push_back(m);
+	}
+
+	return moves;
+}
+
+std::vector<Move> MoveGen::generatePlMoves(){
 	std::vector<Move> moves;
 
 	generatePawnMoves(moves);
@@ -13,12 +27,12 @@ std::vector<Move> PseudoLegalMoveGen::generatePlMoves(){
 	return moves;
 };
 
-void PseudoLegalMoveGen::generatePawnMoves(std::vector<Move>& moves){
+void MoveGen::generatePawnMoves(std::vector<Move>& moves){
 	if (board.turn == WHITE) generateWhitePawnMoves(moves);
 	else generateBlackPawnMoves(moves);
 }
 
-void PseudoLegalMoveGen::generateRookMoves(std::vector<Move>& moves){
+void MoveGen::generateRookMoves(std::vector<Move>& moves){
 	uint64_t rooks = board.pieces[board.turn][ROOK];
 	
 	// get current turn occupied
@@ -43,7 +57,7 @@ void PseudoLegalMoveGen::generateRookMoves(std::vector<Move>& moves){
 	}
 }
 
-void PseudoLegalMoveGen::generateKnightMoves(std::vector<Move>& moves){
+void MoveGen::generateKnightMoves(std::vector<Move>& moves){
 	uint64_t knights = board.pieces[board.turn][KNIGHT];
 
 	uint64_t own = (board.turn == WHITE) ? board.whiteOccupancy : board.blackOccupancy;
@@ -65,7 +79,7 @@ void PseudoLegalMoveGen::generateKnightMoves(std::vector<Move>& moves){
 	}
 }
 
-void PseudoLegalMoveGen::generateBishopMoves(std::vector<Move>& moves){
+void MoveGen::generateBishopMoves(std::vector<Move>& moves){
 	uint64_t bishops = board.pieces[board.turn][BISHOP];
 
 	uint64_t own = (board.turn == WHITE) ? board.whiteOccupancy : board.blackOccupancy;
@@ -89,7 +103,7 @@ void PseudoLegalMoveGen::generateBishopMoves(std::vector<Move>& moves){
 	}
 }
 
-void PseudoLegalMoveGen::generateQueenMoves(std::vector<Move>& moves){
+void MoveGen::generateQueenMoves(std::vector<Move>& moves){
 
 	uint64_t queen = board.pieces[board.turn][QUEEN];
 
@@ -114,7 +128,7 @@ void PseudoLegalMoveGen::generateQueenMoves(std::vector<Move>& moves){
 	}
 }
 
-void PseudoLegalMoveGen::generateKingMoves(std::vector<Move>& moves){
+void MoveGen::generateKingMoves(std::vector<Move>& moves){
 	
 	uint64_t king = board.pieces[board.turn][KING];
 
@@ -134,7 +148,7 @@ void PseudoLegalMoveGen::generateKingMoves(std::vector<Move>& moves){
 	}
 }
 
-void PseudoLegalMoveGen::generateBlackPawnMoves(std::vector<Move>& moves){ 
+void MoveGen::generateBlackPawnMoves(std::vector<Move>& moves){ 
 
 	uint64_t pawns = board.pieces[board.turn][PAWN]; 
 	uint64_t empty = ~board.occupied;
@@ -204,7 +218,7 @@ void PseudoLegalMoveGen::generateBlackPawnMoves(std::vector<Move>& moves){
 
 }
 
-void PseudoLegalMoveGen::generateWhitePawnMoves(std::vector<Move>& moves){ 
+void MoveGen::generateWhitePawnMoves(std::vector<Move>& moves){ 
 
 	uint64_t pawns = board.pieces[board.turn][PAWN]; 
 	uint64_t empty = ~board.occupied;
@@ -272,4 +286,3 @@ void PseudoLegalMoveGen::generateWhitePawnMoves(std::vector<Move>& moves){
 		moves.emplace_back(makeMove(from, to, PAWN, PROMOTION));
 	}
 }
-
