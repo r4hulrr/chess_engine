@@ -20,6 +20,7 @@ private:
 	void generateQueenMoves(std::vector<Move>& moves);
 	void generateKingMoves(std::vector<Move>& moves);
 
+	void generateCastlingMoves(std::vector<Move>& moves);
 	void generateWhitePawnMoves(std::vector<Move>& moves);
 	void generateBlackPawnMoves(std::vector<Move>& moves);
 };

@@ -146,6 +146,43 @@ void MoveGen::generateKingMoves(std::vector<Move>& moves){
 
 		moves.emplace_back(makeMove(from, to, KING, flag));
 	}
+
+	generateCastlingMoves(moves);
+}
+
+void MoveGen::generateCastlingMoves(std::vector<Move>& moves){
+	Color attacker = board.turn;
+	Color defender = opposite(attacker);
+
+	if (attacker == WHITE){
+		// white king goes from e1 to g1
+		if ((board.castlingRights & WHITE_KINGSIDE) &&
+		!(board.occupied & ((1ULL << F1) | (1ULL << G1))) &&
+		!board.isSquareAttacked(E1, them) &&
+		!board.isSquareAttacked(F1, them) &&
+		!board.isSquareAttacked(G1, them)) moves.emplace_back(makeMove(E1, G1, KING, KING_CASTLE));
+
+		// white queen side e1 to c1
+		if ((board.castlingRights & WHITE_QUEENSIDE) &&
+		!(board.occupied & ((1ULL << D1) | (1ULL << C1) | (1ULL << B1))) &&
+		!board.isSquareAttacked(E1, them) &&
+		!board.isSquareAttacked(D1, them) &&
+		!board.isSquareAttacked(C1, them)) moves.emplace_back(makeMove(E1, C1, KING, QUEEN_CASTLE));
+	}else{
+		// black king goes from e8 to g8
+		if ((board.castlingRights & BLACK_KINGSIDE) &&
+		!(board.occupied & ((1ULL << F8) | (1ULL << G8))) &&
+		!board.isSquareAttacked(E8, them) &&
+		!board.isSquareAttacked(F8, them) &&
+		!board.isSquareAttacked(G8, them)) moves.emplace_back(makeMove(E8, G8, KING, KING_CASTLE));
+
+		// white queen side e8 to c8
+		if ((board.castlingRights & BLACK_QUEENSIDE) &&
+		!(board.occupied & ((1ULL << D8) | (1ULL << C8) | (1ULL << B8))) &&
+		!board.isSquareAttacked(E8, them) &&
+		!board.isSquareAttacked(D8, them) &&
+		!board.isSquareAttacked(C8, them)) moves.emplace_back(makeMove(E8, C8, KING, QUEEN_CASTLE));
+	}
 }
 
 void MoveGen::generateBlackPawnMoves(std::vector<Move>& moves){ 

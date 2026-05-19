@@ -52,7 +52,7 @@ void Board::makeMove(Move& move){
 	pieces[maker][move.piece] &= ~from;
 	
 
-	// handle capture
+	// handle flags
 	if (move.flag == CAPTURE){
 		for(int p = PAWN; p <= KING ; p++){
 			if (pieces[defender][p] & to){
@@ -61,6 +61,46 @@ void Board::makeMove(Move& move){
 			}
 		}
 	}
+
+	// if castling rook piece should also be updated
+	if (move.flag == KING_CASTLE){
+		if (maker == WHITE){
+			pieces[WHITE][ROOK] &= ~(1ULL << H1);
+			pieces[WHITE][ROOK] &= ~(1ULL << F1);
+		}else{
+			pieces[BLACK][ROOK] &= ~(1ULL << H8);
+			pieces[BLACK][ROOK] |= (1ULL << F8);
+		}
+	}
+
+	if (move.flag == QUEEN_CASTLE){
+		if (maker == WHITE){
+			pieces[WHITE][ROOK] &= ~(1ULL << A1);
+			pieces[WHITE][ROOK] &= ~(1ULL << D1);
+		}else{
+			pieces[BLACK][ROOK] &= ~(1ULL << A8);
+			pieces[BLACK][ROOK] |= (1ULL << D8);
+		}
+	}
+
+	// update castling rights if change in kings or rook position
+	if (move.piece == KING) {
+		if (maker == WHITE) castlingRights &= ~(WHITE_KINGSIDE | WHITE_QUEENSIDE);
+		else castlingRights &= ~(BLACK_KINGSIDE | BLACK_QUEENSIDE);
+	}
+
+	if (move.piece == ROOK) {
+		if (move.from == H1) castlingRights &= ~WHITE_KINGSIDE;
+		if (move.from == A1) castlingRights &= ~WHITE_QUEENSIDE;
+		if (move.from == H8) castlingRights &= ~BLACK_KINGSIDE;
+		if (move.from == A8) castlingRights &= ~BLACK_QUEENSIDE;
+	}
+
+	if (move.to == H1) castlingRights &= ~WHITE_KINGSIDE;
+	if (move.to == A1) castlingRights &= ~WHITE_QUEENSIDE;
+	if (move.to == H8) castlingRights &= ~BLACK_KINGSIDE;
+	if (move.to == A8) castlingRights &= ~BLACK_QUEENSIDE;
+}
 
 	// place moving piece on new position
 	pieces[maker][move.piece] |= to;

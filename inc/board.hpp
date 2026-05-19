@@ -4,6 +4,7 @@
 class Board{
 public:
 	uint64_t pieces[2][6];
+	uint8_t castlingRights;
 	Color turn;
 
 	uint64_t whiteOccupancy;
@@ -15,5 +16,6 @@ public:
 	[[nodiscard]] bool isSquareAttacked(int sq, Color attacker) const;
 
 	void makeMove(const Move& move);
+
 };
 
