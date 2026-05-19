@@ -6,9 +6,9 @@ std::vector<Move> MoveGen::generateMoves(){
 
 	for(const Move& m : pl_moves){
 		Board next = board;
-		next.makeMove(m)
+		next.makeMove(m);
 
-		if (!next.inCheck(board.turn)) legal.push_back(m);
+		if (!next.inCheck(board.turn)) moves.push_back(m);
 	}
 
 	return moves;
@@ -158,30 +158,30 @@ void MoveGen::generateCastlingMoves(std::vector<Move>& moves){
 		// white king goes from e1 to g1
 		if ((board.castlingRights & WHITE_KINGSIDE) &&
 		!(board.occupied & ((1ULL << F1) | (1ULL << G1))) &&
-		!board.isSquareAttacked(E1, them) &&
-		!board.isSquareAttacked(F1, them) &&
-		!board.isSquareAttacked(G1, them)) moves.emplace_back(makeMove(E1, G1, KING, KING_CASTLE));
+		!board.isSquareAttacked(E1, defender) &&
+		!board.isSquareAttacked(F1, defender) &&
+		!board.isSquareAttacked(G1, defender)) moves.emplace_back(makeMove(E1, G1, KING, KING_CASTLE));
 
 		// white queen side e1 to c1
 		if ((board.castlingRights & WHITE_QUEENSIDE) &&
 		!(board.occupied & ((1ULL << D1) | (1ULL << C1) | (1ULL << B1))) &&
-		!board.isSquareAttacked(E1, them) &&
-		!board.isSquareAttacked(D1, them) &&
-		!board.isSquareAttacked(C1, them)) moves.emplace_back(makeMove(E1, C1, KING, QUEEN_CASTLE));
+		!board.isSquareAttacked(E1, defender) &&
+		!board.isSquareAttacked(D1, defender) &&
+		!board.isSquareAttacked(C1, defender)) moves.emplace_back(makeMove(E1, C1, KING, QUEEN_CASTLE));
 	}else{
 		// black king goes from e8 to g8
 		if ((board.castlingRights & BLACK_KINGSIDE) &&
 		!(board.occupied & ((1ULL << F8) | (1ULL << G8))) &&
-		!board.isSquareAttacked(E8, them) &&
-		!board.isSquareAttacked(F8, them) &&
-		!board.isSquareAttacked(G8, them)) moves.emplace_back(makeMove(E8, G8, KING, KING_CASTLE));
+		!board.isSquareAttacked(E8, defender) &&
+		!board.isSquareAttacked(F8, defender) &&
+		!board.isSquareAttacked(G8, defender)) moves.emplace_back(makeMove(E8, G8, KING, KING_CASTLE));
 
 		// white queen side e8 to c8
 		if ((board.castlingRights & BLACK_QUEENSIDE) &&
 		!(board.occupied & ((1ULL << D8) | (1ULL << C8) | (1ULL << B8))) &&
-		!board.isSquareAttacked(E8, them) &&
-		!board.isSquareAttacked(D8, them) &&
-		!board.isSquareAttacked(C8, them)) moves.emplace_back(makeMove(E8, C8, KING, QUEEN_CASTLE));
+		!board.isSquareAttacked(E8, defender) &&
+		!board.isSquareAttacked(D8, defender) &&
+		!board.isSquareAttacked(C8, defender)) moves.emplace_back(makeMove(E8, C8, KING, QUEEN_CASTLE));
 	}
 }
 

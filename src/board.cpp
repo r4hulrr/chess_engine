@@ -41,7 +41,7 @@
 	return false;
 }
 
-void Board::makeMove(Move& move){
+void Board::makeMove(const Move& move){
 	Color maker = turn;
 	Color defender = opposite(turn);
 
@@ -66,7 +66,7 @@ void Board::makeMove(Move& move){
 	if (move.flag == KING_CASTLE){
 		if (maker == WHITE){
 			pieces[WHITE][ROOK] &= ~(1ULL << H1);
-			pieces[WHITE][ROOK] &= ~(1ULL << F1);
+			pieces[WHITE][ROOK] |= ~(1ULL << F1);
 		}else{
 			pieces[BLACK][ROOK] &= ~(1ULL << H8);
 			pieces[BLACK][ROOK] |= (1ULL << F8);
@@ -76,7 +76,7 @@ void Board::makeMove(Move& move){
 	if (move.flag == QUEEN_CASTLE){
 		if (maker == WHITE){
 			pieces[WHITE][ROOK] &= ~(1ULL << A1);
-			pieces[WHITE][ROOK] &= ~(1ULL << D1);
+			pieces[WHITE][ROOK] |= ~(1ULL << D1);
 		}else{
 			pieces[BLACK][ROOK] &= ~(1ULL << A8);
 			pieces[BLACK][ROOK] |= (1ULL << D8);
@@ -118,7 +118,6 @@ void Board::makeMove(Move& move){
 	if (move.to == A1) castlingRights &= ~WHITE_QUEENSIDE;
 	if (move.to == H8) castlingRights &= ~BLACK_KINGSIDE;
 	if (move.to == A8) castlingRights &= ~BLACK_QUEENSIDE;
-}
 
 	// place moving piece on new position
 	pieces[maker][move.piece] |= to;
