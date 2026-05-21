@@ -1,5 +1,8 @@
 #pragma once
+#include "bitboard.hpp"
 #include "types.hpp"
+#include "attacks.hpp"
+#include "attack_tables.hpp"
 
 class Board{
 public:
@@ -17,6 +20,7 @@ public:
 	[[nodiscard]] bool isSquareAttacked(int sq, Color attacker) const;
 
 	void makeMove(const Move& move);
-
+	
+	void setStartPos();
 };
 

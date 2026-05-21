@@ -8,7 +8,8 @@ enum Piece : uint8_t {
 	KNIGHT,
 	BISHOP,
 	QUEEN,
-	KING
+	KING,
+	NO_PIECE
 };
 
 enum Color : uint8_t {
@@ -21,8 +22,10 @@ enum MoveFlag : uint8_t {
 	CAPTURE,
 	DOUBLE_PAWN_PUSH,
 	KING_CASTLE,
-	ENPASSANT,
-	PROMOTION
+	QUEEN_CASTLE,
+	EN_PASSANT,
+	PROMOTION,
+	PROMOTION_CAPTURE
 };
 
 struct Move{
@@ -30,4 +33,5 @@ struct Move{
 	uint8_t to;
 	Piece piece;
 	MoveFlag flags;
+	Piece promotionPiece = NO_PIECE;
 };

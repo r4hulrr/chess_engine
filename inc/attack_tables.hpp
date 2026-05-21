@@ -5,7 +5,7 @@ constexpr bool onBoard(int r, int f){
 	return r >= 0 && r < 8 && f >= 0 && f < 8;
 }
 
-constexpr uint64_t knightattacksfrom(int sq){
+constexpr uint64_t knightAttacksFrom(int sq){
 	uint64_t attacks = 0;
 
 	int r = sq / 8;
@@ -19,7 +19,7 @@ constexpr uint64_t knightattacksfrom(int sq){
 		int rr = r + dr[i];
 		int ff = f + df[i];
 
-		if (onboard(rr, ff)){
+		if (onBoard(rr, ff)){
 			int target = rr*8 + ff;
 			attacks |= (1ull << target); 
 		}
@@ -40,7 +40,8 @@ constexpr std::array<uint64_t, 64> generateKnightAttacks(){
 	return table;
 }
 
-constexpr uint64_t kingattacksfrom(int king){
+constexpr uint64_t kingAttacksFrom(int sq){
+	uint64_t king = 1ULL << sq;
 	uint64_t attacks = 0;
 
 	attacks |= king << 8;   // north

@@ -41,6 +41,48 @@
 	return false;
 }
 
+void Board::setStartPos() {
+
+	// white pawns
+	pieces[WHITE][PAWN]   = 0x000000000000FF00ULL;
+
+	// white pieces
+	pieces[WHITE][ROOK]   = 0x0000000000000081ULL;
+	pieces[WHITE][KNIGHT] = 0x0000000000000042ULL;
+	pieces[WHITE][BISHOP] = 0x0000000000000024ULL;
+	pieces[WHITE][QUEEN]  = 0x0000000000000008ULL;
+	pieces[WHITE][KING]   = 0x0000000000000010ULL;
+
+	// black pawns
+	pieces[BLACK][PAWN]   = 0x00FF000000000000ULL;
+
+	// black pieces
+	pieces[BLACK][ROOK]   = 0x8100000000000000ULL;
+	pieces[BLACK][KNIGHT] = 0x4200000000000000ULL;
+	pieces[BLACK][BISHOP] = 0x2400000000000000ULL;
+	pieces[BLACK][QUEEN]  = 0x0800000000000000ULL;
+	pieces[BLACK][KING]   = 0x1000000000000000ULL;
+
+	whiteOccupancy = 0;
+	blackOccupancy = 0;
+
+	for (int p = PAWN; p <= KING; ++p) {
+		whiteOccupancy |= pieces[WHITE][p];
+		blackOccupancy |= pieces[BLACK][p];
+	}
+
+	occupied = whiteOccupancy | blackOccupancy;
+
+	turn = WHITE;
+
+	castlingRights = WHITE_KINGSIDE |
+		WHITE_QUEENSIDE |
+		BLACK_KINGSIDE |
+		BLACK_QUEENSIDE;
+
+	enPassantSquare = -1;
+}
+
 void Board::makeMove(const Move& move){
 	Color maker = turn;
 	Color defender = opposite(turn);
@@ -52,8 +94,8 @@ void Board::makeMove(const Move& move){
 	pieces[maker][move.piece] &= ~from;
 	
 
-	// handle flags
-	if (move.flag == CAPTURE){
+	// handle flagss
+	if (move.flags == CAPTURE || move.flags == PROMOTION_CAPTURE){
 		for(int p = PAWN; p <= KING ; p++){
 			if (pieces[defender][p] & to){
 				pieces[defender][p] &= ~to;
@@ -63,20 +105,20 @@ void Board::makeMove(const Move& move){
 	}
 
 	// if castling rook piece should also be updated
-	if (move.flag == KING_CASTLE){
+	if (move.flags == KING_CASTLE){
 		if (maker == WHITE){
 			pieces[WHITE][ROOK] &= ~(1ULL << H1);
-			pieces[WHITE][ROOK] |= ~(1ULL << F1);
+			pieces[WHITE][ROOK] |= (1ULL << F1);
 		}else{
 			pieces[BLACK][ROOK] &= ~(1ULL << H8);
 			pieces[BLACK][ROOK] |= (1ULL << F8);
 		}
 	}
 
-	if (move.flag == QUEEN_CASTLE){
+	if (move.flags == QUEEN_CASTLE){
 		if (maker == WHITE){
 			pieces[WHITE][ROOK] &= ~(1ULL << A1);
-			pieces[WHITE][ROOK] |= ~(1ULL << D1);
+			pieces[WHITE][ROOK] |= (1ULL << D1);
 		}else{
 			pieces[BLACK][ROOK] &= ~(1ULL << A8);
 			pieces[BLACK][ROOK] |= (1ULL << D8);
@@ -86,12 +128,12 @@ void Board::makeMove(const Move& move){
 	// we need to reset en passant as its only valid for one move
 	enPassantSquare = -1;
 
-	if (move.flag == DOUBLE_PAWN_PUSH){
+	if (move.flags == DOUBLE_PAWN_PUSH){
 		if (maker == WHITE) enPassantSquare = move.from + 8;
 		else enPassantSquare = move.from - 8;
 	}
 
-	if (move.flag == EN_PASSANT){
+	if (move.flags == EN_PASSANT){
 		if (maker == WHITE){
 			int capturedSq = move.to - 8;
 			pieces[BLACK][PAWN] &= ~(1ULL << capturedSq);
@@ -120,7 +162,8 @@ void Board::makeMove(const Move& move){
 	if (move.to == A8) castlingRights &= ~BLACK_QUEENSIDE;
 
 	// place moving piece on new position
-	pieces[maker][move.piece] |= to;
+	if (move.flags == PROMOTION_CAPTURE || move.flags == PROMOTION) pieces[maker][move.promotionPiece] |= to;
+	else pieces[maker][move.piece] |= to;
 
 	// update occupancies
 	whiteOccupancy = 0;

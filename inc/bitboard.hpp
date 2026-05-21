@@ -1,10 +1,11 @@
+#pragma once
 #include "types.hpp"
 
 #include <bit>
 
 // helper functions
 
-inline int pop_lsb(uint64_t& b){
+inline int popLSB(uint64_t& b){
 	// get idx of lsb
 	auto idx = std::countr_zero(b);
 
@@ -23,8 +24,18 @@ inline Move makeMove(int from, int to, Piece piece, MoveFlag flag){
 	};
 }
 
+inline Move makeMove(int from, int to, Piece piece, Piece promo, MoveFlag flag){
+	return Move{
+		static_cast<uint8_t>(from),
+		static_cast<uint8_t>(to),
+		piece,
+		flag,
+		promo
+	};
+}
+
 [[nodiscard]] constexpr Color opposite(Color c){
-	return c == WHITE ? BLACK ? WHITE;
+	return c == WHITE ? BLACK : WHITE;
 }
 
 // ranks and files

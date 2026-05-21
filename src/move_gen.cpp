@@ -209,7 +209,10 @@ void MoveGen::generateBlackPawnMoves(std::vector<Move>& moves){
 	while(promotion){
 		int to = popLSB(promotion);
 		int from = to + 8;
-		moves.emplace_back(makeMove(from, to, PAWN, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, QUEEN, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, ROOK, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, BISHOP, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, KNIGHT, PROMOTION));
 	}
 
 	while(twoStep){
@@ -244,13 +247,20 @@ void MoveGen::generateBlackPawnMoves(std::vector<Move>& moves){
 	while (captureLeftPromo) {
 		int to = popLSB(captureLeftPromo);
 		int from = to + 9;
-		moves.emplace_back(makeMove(from, to, PAWN, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, QUEEN, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, ROOK, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, BISHOP, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, KNIGHT, PROMOTION_CAPTURE));
 	}
 
 	while (captureRightPromo) {
 		int to = popLSB(captureRightPromo);
 		int from = to + 7;
-		moves.emplace_back(makeMove(from, to, PAWN, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, QUEEN, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, ROOK, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, BISHOP, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, KNIGHT, PROMOTION_CAPTURE));
+
 	}
 
 	// handle en passant
@@ -281,7 +291,10 @@ void MoveGen::generateWhitePawnMoves(std::vector<Move>& moves){
 	while(promotion){
 		int to = popLSB(promotion);
 		int from = to - 8;
-		moves.emplace_back(makeMove(from, to, PAWN, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, QUEEN, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, ROOK, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, BISHOP, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, KNIGHT, PROMOTION));
 	}
 
 	while(twoStep){
@@ -316,13 +329,19 @@ void MoveGen::generateWhitePawnMoves(std::vector<Move>& moves){
 	while (captureLeftPromo) {
 		int to = popLSB(captureLeftPromo);
 		int from = to - 7;
-		moves.emplace_back(makeMove(from, to, PAWN, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, QUEEN, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, ROOK, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, BISHOP, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, KNIGHT, PROMOTION_CAPTURE));
 	}
 
 	while (captureRightPromo) {
 		int to = popLSB(captureRightPromo);
 		int from = to - 9;
-		moves.emplace_back(makeMove(from, to, PAWN, PROMOTION));
+		moves.emplace_back(makeMove(from, to, PAWN, QUEEN, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, ROOK, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, BISHOP, PROMOTION_CAPTURE));
+		moves.emplace_back(makeMove(from, to, PAWN, KNIGHT, PROMOTION_CAPTURE));
 	}
 
 	generateWhiteEnPassant(moves);
@@ -335,9 +354,8 @@ void MoveGen::generateWhiteEnPassant(std::vector<Move>& moves){
 	
 	// white pawn from left of captures right/up or left/up
 	
-	uint64_t fromLeft = (epB >> 9) & board.pieces[WHITE][PAWN];
-
-	uint64_t fromRight = (epB >> 7) & board.pieces[WHITE][PAWN];
+	uint64_t fromLeft  = ((epB & NOT_FILE_A) >> 9) & board.pieces[WHITE][PAWN];
+	uint64_t fromRight = ((epB & NOT_FILE_H) >> 7) & board.pieces[WHITE][PAWN];
 
 	while(fromLeft){
 		int from = popLSB(fromLeft);
@@ -355,9 +373,8 @@ void MoveGen::generateBlackEnPassant(std::vector<Move>& moves){
 
 	uint64_t epW = 1ULL << board.enPassantSquare;
 	
-	uint64_t fromLeft = (epW << 7) & board.pieces[BLACK][PAWN];
-
-	uint64_t fromRight = (epW << 9) & board.pieces[BLACK][PAWN];
+	uint64_t fromLeft  = ((epW & NOT_FILE_A) << 7) & board.pieces[BLACK][PAWN];
+	uint64_t fromRight = ((epW & NOT_FILE_H) << 9) & board.pieces[BLACK][PAWN];
 
 	while(fromLeft){
 		int from = popLSB(fromLeft);

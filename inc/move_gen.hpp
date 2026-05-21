@@ -1,6 +1,10 @@
 #pragma once
 #include "types.hpp"
+#include "board.hpp"
 #include <vector>
+#include "attack_tables.hpp"
+#include "bitboard.hpp"
+#include "attacks.hpp"
 
 class MoveGen{
 public:
@@ -23,6 +27,6 @@ private:
 	void generateCastlingMoves(std::vector<Move>& moves);
 	void generateWhitePawnMoves(std::vector<Move>& moves);
 	void generateBlackPawnMoves(std::vector<Move>& moves);
-	void generateBlackEnPassant(std::vector<Move>& moves){
-	void generateWhiteEnPassant(std::vector<Move>& moves){
+	void generateBlackEnPassant(std::vector<Move>& moves);
+	void generateWhiteEnPassant(std::vector<Move>& moves);
 };
