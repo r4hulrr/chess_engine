@@ -3,13 +3,13 @@
 #include <cstdint>
 
 enum Piece : uint8_t {
-	PAWN,
-	ROOK,
-	KNIGHT,
-	BISHOP,
-	QUEEN,
-	KING,
-	NO_PIECE
+	PAWN = 0,
+	ROOK = 1,
+	KNIGHT = 2,
+	BISHOP = 3,
+	QUEEN = 4,
+	KING = 5,
+	NO_PIECE = 6
 };
 
 enum Color : uint8_t {
