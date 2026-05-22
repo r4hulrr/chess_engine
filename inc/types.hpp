@@ -28,12 +28,6 @@ enum MoveFlag : uint8_t {
 	PROMOTION_CAPTURE
 };
 
-struct SearchResult{
-	Move bestMove;
-	int bestScore;
-	long long nodes;
-};
-
 struct Move{
 	uint8_t from;
 	uint8_t to;
@@ -41,3 +35,10 @@ struct Move{
 	MoveFlag flags;
 	Piece promotionPiece = NO_PIECE;
 };
+
+struct SearchResult{
+	Move bestMove;
+	int bestScore;
+	long long nodes;
+};
+

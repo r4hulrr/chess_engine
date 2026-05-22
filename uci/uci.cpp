@@ -57,7 +57,7 @@ void handleGo(Board& board, std::istringstream& args){
 	}
 
 	Search s;
-	SearchResult s.getBestMove(board, depth);
+	SearchResult result = s.getBestMove(board, depth);
 
 	std::cout << "info depth " << depth
 		<< " score cp "  << result.bestScore

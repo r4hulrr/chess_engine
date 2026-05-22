@@ -1,25 +1,28 @@
-CXX = g++
-CXXFLAGS = -std=c++20 -Wall -Wextra -O2 -Iinc -MMD -MP
+CXX      := g++
+CXXFLAGS := -std=c++20 -Wall -Wextra -Wpedantic -O2 -Iinc
 
-SRC = \
+BUILD_DIR := build
+TARGET    := $(BUILD_DIR)/chess_engine
+
+SRCS := \
 	src/board.cpp \
+	src/eval.cpp \
 	src/move_gen.cpp \
-	test/main.cpp \
-	test/perft.cpp
+	src/search.cpp \
+	uci/uci.cpp
 
-OBJ = $(SRC:%.cpp=build/%.o)
-DEP = $(OBJ:.o=.d)
+OBJS := $(SRCS:%.cpp=$(BUILD_DIR)/%.o)
 
-TARGET = build/perft
+all: $(TARGET)
 
-$(TARGET): $(OBJ)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJ)
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) $^ -o $@
 
-build/%.o: %.cpp
-	mkdir -p $(dir $@)
+$(BUILD_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
-	rm -rf build
+	rm -rf $(BUILD_DIR)
 
--include $(DEP)
+.PHONY: all clean

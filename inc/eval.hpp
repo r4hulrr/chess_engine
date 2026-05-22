@@ -1,6 +1,7 @@
 #pragma once
 #include <bit>
 #include <array>
+#include "board.hpp"
 
 class Eval{
 public:

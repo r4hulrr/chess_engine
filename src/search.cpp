@@ -14,7 +14,7 @@ SearchResult Search::getBestMove(const Board& board, int depth){
 		if (board.inCheck(board.turn)) score = -MATE_VAL;
 		else score = 0;
 
-		return SearchResult{ Move{}, score, depth, nodes };
+		return SearchResult{ Move{}, score, nodes };
 	}
 
 	Move bestMove;
@@ -36,7 +36,7 @@ SearchResult Search::getBestMove(const Board& board, int depth){
 		alpha = std::max(alpha, score);
 	}
 
-	return {bestMove, bestScore, depth, nodes};
+	return {bestMove, bestScore, nodes};
 }
 
 
@@ -59,7 +59,7 @@ int Search::negamax(const Board& board, int depth, int alpha, int beta){
 	
 	int bestScore{INT_MIN};
 
-	for(const& auto m : moves){
+	for(const auto& m : moves){
 		Board next = board;
 		next.makeMove(m);
 
