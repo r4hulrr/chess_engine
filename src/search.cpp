@@ -1,6 +1,6 @@
 #include "search.hpp"
 
-SearchResult Search::getBestMove(const& Board board, int depth){
+SearchResult Search::getBestMove(const Board& board, int depth){
 	nodes = 0;
 
 	MoveGen gen(board);
@@ -22,7 +22,7 @@ SearchResult Search::getBestMove(const& Board board, int depth){
 	int alpha = INT_MIN;
 	int beta = INT_MAX;
 
-	for(const& auto m : moves){
+	for(const auto& m : moves){
 		Board next = board;
 		next.makeMove(m);
 		
@@ -33,13 +33,14 @@ SearchResult Search::getBestMove(const& Board board, int depth){
 			bestMove = m;
 			bestScore = score;
 		}
+		alpha = std::max(alpha, score);
 	}
 
 	return {bestMove, bestScore, depth, nodes};
 }
 
 
-int Search::negamax(const& Board board, int depth, int alpha, int beta){
+int Search::negamax(const Board& board, int depth, int alpha, int beta){
 	if (depth == 0) return Eval::evaluate(board);
 	
 	MoveGen gen(board);
@@ -62,7 +63,7 @@ int Search::negamax(const& Board board, int depth, int alpha, int beta){
 		Board next = board;
 		next.makeMove(m);
 
-		int score = -negamax(board, depth - 1, -beta, -alpha);
+		int score = -negamax(next, depth - 1, -beta, -alpha);
 		bestScore = std::max(bestScore, score);
 		alpha = std::max(score, alpha);
 		if (alpha >= beta) break; // will never be taken as opponent takes max of neg of your score

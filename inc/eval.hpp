@@ -4,7 +4,7 @@
 
 class Eval{
 public:
-	[[no_discard]] static int evaluate(const Board& board);
+	[[nodiscard]] static int evaluate(const Board& board);
 private:
 	static constexpr std::array<int, 6> PIECE_VALUES = {
 		100,  // PAWN !ORDERING MUST BE MAINTAINED with types.hpp
