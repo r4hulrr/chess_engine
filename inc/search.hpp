@@ -11,5 +11,5 @@ public:
 private:
 	long long nodes{0};
 
-	int negamax(const& Board board, int depth);
+	int negamax(const& Board board, int depth, int alpha, int beta);
 };
