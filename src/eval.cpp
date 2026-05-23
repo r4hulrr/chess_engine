@@ -11,14 +11,14 @@ int Eval::evaluate(const Board& board){
 
 		while (w) {
 			int sq = popLSB(w);
-			white += PIECE_VALUES[p] + PST[p][sq];
+			white += PIECE_VALUES[p] + PST[p][sq ^ 56];
 		}
 
 		uint64_t b = board.pieces[BLACK][p]; 
 
 		while (b) {
 			int sq = popLSB(b);
-			black += PIECE_VALUES[p] + PST[p][sq ^ 56];
+			black += PIECE_VALUES[p] + PST[p][sq];
 		}
 	}
 

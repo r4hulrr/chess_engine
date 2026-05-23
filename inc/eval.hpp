@@ -5,8 +5,6 @@
 
 class Eval{
 public:
-	[[nodiscard]] static int evaluate(const Board& board);
-private:
 	static constexpr std::array<int, 6> PIECE_VALUES = {
 		100,  // PAWN !ORDERING MUST BE MAINTAINED with types.hpp
 		500,  // ROOK
@@ -15,8 +13,12 @@ private:
 		900, // QUEEN
 		20000, // KING
 	};
-	
-	// again MAINTAIN ORDERING
+
+	[[nodiscard]] static int evaluate(const Board& board);
+
+private:	
+	// again MAINTAIN ORDERING 
+	// here PST[p][0] is A8 
 	static constexpr std::array<std::array<int, 64>, 6> PST = {{
 		// PAWN
 		{{ 0,  0,  0,  0,  0,  0,  0,  0,

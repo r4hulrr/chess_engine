@@ -1,9 +1,10 @@
 #pragma once
 #include "eval.hpp"
-#include <climits>
 #include "move_gen.hpp"
+#include <algorithm>
 
 static constexpr int MATE_VAL = 900000; // arbitary small value for mate so it isnt preferred
+static constexpr int INF = 1'000'000'000; // safer 
 
 class Search{
 public:
