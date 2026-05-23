@@ -4,13 +4,25 @@
 int Eval::evaluate(const Board& board){
 	int white{0};
 	int black{0};
-	
-	for(int i = PAWN; i <= KING ; i++){
-		white += std::popcount(board.pieces[WHITE][i]) * PIECE_VALUES[i];
-		black += std::popcount(board.pieces[BLACK][i]) * PIECE_VALUES[i];
+
+	for (int p = PAWN; p <= KING; ++p) {
+		 
+		uint64_t w = board.pieces[WHITE][p];
+
+		while (w) {
+			int sq = popLSB(w);
+			white += PIECE_VALUES[p] + PST[p][sq];
+		}
+
+		uint64_t b = board.pieces[BLACK][p]; 
+
+		while (b) {
+			int sq = popLSB(b);
+			black += PIECE_VALUES[p] + PST[p][sq ^ 56];
+		}
 	}
 
-	const int score = white - black;
-	return board.turn == WHITE ? score : -score; 
+	int score = white - black;
+	return board.turn == WHITE ? score : -score;
 }
 

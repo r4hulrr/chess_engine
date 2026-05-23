@@ -49,7 +49,7 @@ int main(){
 
 void handleGo(Board& board, std::istringstream& args){
 	std::string token;
-	int depth{6};
+	int depth{8};
 	
 	// only handling depth for now
 	while(args >> token){
