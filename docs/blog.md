@@ -79,3 +79,96 @@ inline int popLSB(uint64_t& b){
 ```
 
 `std::countr_zero` maps to a single hardware instruction on most modern CPUs. The `b &= b - 1` trick works because subtracting 1 from a number flips the lowest set bit to 0 and all lower bits to 1, so ANDing with the original clears exactly the lowest set bit and nothing else.
+
+# Move Representation
+
+A move needs to encode: 
+- where a piece is coming from, 
+- where it's going, 
+- what kind of piece it is, 
+- and what special thing (if anything) is happening. 
+
+Promotions additionally need to record what the pawn is promoting to.
+
+```cpp
+struct Move {
+    uint8_t   from;
+    uint8_t   to;
+    Piece     piece;
+    MoveFlag  flags;
+    Piece     promotionPiece = NO_PIECE;
+};
+
+enum MoveFlag : uint8_t {
+    QUIET, 
+    CAPTURE, 
+    DOUBLE_PAWN_PUSH,
+    KING_CASTLE, 
+    QUEEN_CASTLE,
+    EN_PASSANT, 
+    PROMOTION, 
+    PROMOTION_CAPTURE
+};
+```
+
+The `from` and `to` fields are square indices (0–63) stored in a byte. The piece type is stored explicitly - this avoids having to scan all piece boards to figure out what moved when applying or scoring the move. The flag encodes everything else: whether it's a capture, a castle, a pawn double-push, en passant, or a promotion. Promotion and promotion-capture are kept as separate flags because they need to trigger different handling in `makeMove`.
+
+Storing `piece` explicitly is a tradeoff: the struct is a few bytes larger, but it saves a scan through the piece boards in both `makeMove` and the move scorer. At typical move counts this is a net win and is good for clarity.
+
+### Making moves
+
+`makeMove` is a copy-and-modify function: the caller copies the board, calls `makeMove` on the copy, and the original is untouched. This avoids the complexity of an unmake function but costs a ~200-byte struct copy per node. For the depths this engine reaches, that copy is fast and the simplicity is worth it.
+
+The logic follows a strict order: 
+- remove the piece from its source square 
+- handle captures (scanning the opponent's pieces at the destination),
+- handle special flags (castling moves the rook too; en passant removes a pawn that isn't on the destination square; double pawn pushes set the en passant square for next move) 
+- update castling rights if a king or rook moves
+- place the piece on the destination (promoting if needed)
+- then recompute all three occupancy bitboards
+
+```cpp
+void Board::makeMove(const Move& move){
+    Color maker    = turn;
+    Color defender = opposite(turn);
+    uint64_t from = 1ULL << move.from;
+    uint64_t to   = 1ULL << move.to;
+
+    // Remove piece from source
+    pieces[maker][move.piece] &= ~from;
+
+    // Remove captured piece (scan defender's boards)
+    if (move.flags == CAPTURE || move.flags == PROMOTION_CAPTURE){
+        for(int p = PAWN; p <= KING; p++){
+            if (pieces[defender][p] & to){
+                pieces[defender][p] &= ~to;
+                break;
+            }
+        }
+    }
+
+    // En passant: captured pawn is NOT on the destination square
+    if (move.flags == EN_PASSANT){
+        if (maker == WHITE) pieces[BLACK][PAWN] &= ~(1ULL << (move.to - 8));
+        else               pieces[WHITE][PAWN] &= ~(1ULL << (move.to + 8));
+    }
+
+    // Place piece (or promotion piece) on destination
+    if (move.flags == PROMOTION || move.flags == PROMOTION_CAPTURE)
+        pieces[maker][move.promotionPiece] |= to;
+    else
+        pieces[maker][move.piece] |= to;
+
+    // Recompute occupancies
+    whiteOccupancy = blackOccupancy = 0;
+    for (int p = PAWN; p <= KING; ++p){
+        whiteOccupancy |= pieces[WHITE][p];
+        blackOccupancy |= pieces[BLACK][p];
+    }
+    occupied = whiteOccupancy | blackOccupancy;
+
+    turn = defender;
+}
+```
+
+
