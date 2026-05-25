@@ -245,4 +245,125 @@ uint64_t twoStep  = ((oneStep & RANK_3) << 8) & empty;
 uint64_t capLeft  = ((pawns & NOT_FILE_A) << 7) & blackOccupancy;
 uint64_t capRight = ((pawns & NOT_FILE_H) << 9) & blackOccupancy;
 ```
+Iterating over the resulting bitboards and converting to moves is a standard popLSB loop. The `from` square for a push is always derived from `to` by reversing the shift - e.g. for a white single push, `from = to - 8`.
+
+Promotions generate four moves each - one for queen, rook, bishop, and knight. All four are added because the best promotion piece is position-dependent (knight underpromotions occasionally win games that queen promotions lose due to stalemate), and the search will naturally find the best one.
+
+### En passant
+
+En passant requires care. The engine stores an `enPassantSquare` that is set when a double pawn push happens and cleared to `-1` at the start of every other move. To find white pawns that can capture en passant, the engine looks at the squares adjacent to the en passant target square and checks if a white pawn sits there.
+
+```cpp
+void MoveGen::generateWhiteEnPassant(std::vector<Move>& moves){
+    if (board.enPassantSquare == -1) return;
+
+    uint64_t epB = 1ULL << board.enPassantSquare;
+
+    // Which white pawns are to the left/right of the ep square?
+    uint64_t fromLeft  = ((epB & NOT_FILE_A) >> 9) & board.pieces[WHITE][PAWN];
+    uint64_t fromRight = ((epB & NOT_FILE_H) >> 7) & board.pieces[WHITE][PAWN];
+    // moves to enPassantSquare with EN_PASSANT flag
+}
+```
+
+### Sliding pieces
+
+Rooks, bishops, and queens use the ray-cast attack functions from `attacks.hpp` directly. The pattern is the same for all three: get the attack bitboard from the piece's square using the current occupancy, mask out squares occupied by friendly pieces (can't capture your own pieces), then loop over the remaining targets.
+
+```cpp
+void MoveGen::generateRookMoves(std::vector<Move>& moves){
+    uint64_t rooks = board.pieces[board.turn][ROOK];
+    uint64_t own   = (board.turn == WHITE) ? board.whiteOccupancy : board.blackOccupancy;
+    uint64_t enemy = (board.turn == WHITE) ? board.blackOccupancy : board.whiteOccupancy;
+
+    while(rooks){
+        int from = popLSB(rooks);
+        uint64_t targets = rookAttacksFrom(from, board.occupied) & ~own;
+
+        while(targets){
+            int to = popLSB(targets);
+            MoveFlag flag = ((1ULL << to) & enemy) ? CAPTURE : QUIET;
+            moves.emplace_back(makeMove(from, to, ROOK, flag));
+        }
+    }
+}
+```
+
+The queen is just a rook and bishop combined - its targets are the union of rook and bishop attacks from the same square.
+
+### Castling
+
+Castling has three conditions beyond just having the right including: the squares between king and rook must be empty, and the king must not pass through or land on an attacked square (castling out of check is also illegal, though that's caught by the legal move filter). These three square checks are done with `isSquareAttacked` calls.
+
+```cpp
+// White kingside: king e1 → g1, rook h1 → f1
+if ((board.castlingRights & WHITE_KINGSIDE)         &&
+    !(board.occupied & ((1ULL << F1) | (1ULL << G1))) &&
+    !board.isSquareAttacked(E1, BLACK)               &&
+    !board.isSquareAttacked(F1, BLACK)               &&
+    !board.isSquareAttacked(G1, BLACK))
+    moves.emplace_back(makeMove(E1, G1, KING, KING_CASTLE));
+```
+
+The castling rights are updated in `makeMove` whenever a king or rook moves, and also whenever a rook's home square is captured - clearing the right for a rook that no longer exists.
+
+# Legal Move Generation
+
+A pseudo-legal move is illegal if it leaves the moving side's king in check. The cleanest way to test this is the make-and-verify approach: make the move on a copy of the board, then ask if the king is in check. If it is, the move is discarded.
+
+```cpp
+std::vector<Move> MoveGen::generateMoves(){
+    std::vector<Move> pl_moves = generatePlMoves();
+    std::vector<Move> moves;
+
+    for(const Move& m : pl_moves){
+        Board next = board;  // copy the board
+        next.makeMove(m);
+
+        if (!next.inCheck(board.turn))  // check the *original* side
+            moves.push_back(m);
+    }
+
+    return moves;
+}
+```
+
+Notice `board.turn`, not `next.turn` - by the time we're checking, `makeMove` has already flipped the turn, so we need to explicitly check the side that just moved.
+
+`inCheck` finds the king square and calls `isSquareAttacked` from the opponent's perspective.
+
+```cpp
+bool Board::inCheck(Color side) const {
+    uint64_t king   = pieces[side][KING];
+    int      kingSq = std::countr_zero(king);
+    return isSquareAttacked(kingSq, opposite(side));
+}
+```
+
+`isSquareAttacked` checks each piece type in turn. For pawns, it reverses the perspective - instead of asking "what does a white pawn on every square attack", it asks "which squares can attack this square as if they were white pawns", and checks if there's actually a white pawn there.
+
+```cpp
+bool Board::isSquareAttacked(int sq, Color attacker) const {
+    uint64_t target = 1ULL << sq;
+
+    // Pawn attacks: look at which squares attack sq from the attacker's direction
+    if (attacker == WHITE){
+        uint64_t pawnAttackers = ((target & NOT_FILE_A) >> 9) |
+                                 ((target & NOT_FILE_H) >> 7);
+        if (pawnAttackers & pieces[WHITE][PAWN]) return true;
+    }
+
+    if (KNIGHT_ATTACKS[sq] & pieces[attacker][KNIGHT]) return true;
+    if (KING_ATTACKS[sq]   & pieces[attacker][KING])   return true;
+
+    if (rookAttacksFrom(sq, occupied)   & (pieces[attacker][ROOK]   | pieces[attacker][QUEEN])) return true;
+    if (bishopAttacksFrom(sq, occupied) & (pieces[attacker][BISHOP] | pieces[attacker][QUEEN])) return true;
+
+    return false;
+}
+```
+
+The make-and-verify approach is simple and correct. Its cost is one board copy and one full attack check per pseudo-legal move. 
+
+An empty move list from `generateMoves` means either checkmate or stalemate - distinguishable by calling `inCheck` on the result.
 
