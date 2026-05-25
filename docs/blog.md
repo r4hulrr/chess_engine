@@ -171,4 +171,78 @@ void Board::makeMove(const Move& move){
 }
 ```
 
+# Attack Tables
+
+Before generating moves, the engine needs to know what squares each piece attacks from any given square. For non-sliding pieces - pawns, knights, and kings - these attack sets don't depend on the positions of other pieces, so they can be precomputed once at compile time and stored in lookup tables.
+
+### Compile-time tables with constexpr
+
+C++17's `constexpr` is powerful enough that the entire table generation runs at compile time. The function computes knight attacks from every square, and the result is a compile-time constant - zero runtime cost, no initialisation function needed.
+
+```cpp
+constexpr uint64_t knightAttacksFrom(int sq){
+    uint64_t attacks = 0;
+    int r = sq / 8, f = sq % 8;
+
+    constexpr int dr[8] = {-2,-2,-1,-1, 1, 1, 2, 2};
+    constexpr int df[8] = {-1, 1,-2, 2,-2, 2,-1, 1};
+
+    for(int i = 0; i < 8; i++){
+        int rr = r + dr[i], ff = f + df[i];
+        if (rr >= 0 && rr < 8 && ff >= 0 && ff < 8)
+            attacks |= (1ULL << (rr*8 + ff));
+    }
+    return attacks;
+}
+
+inline constexpr auto KNIGHT_ATTACKS = generateKnightAttacks();
+inline constexpr auto KING_ATTACKS   = generateKingAttacks();
+```
+
+The king attack table is generated the same way, using bitwise shifts with the file masks to prevent wrap-around: east and north-east shifts are masked with `NOT_FILE_H`, west and north-west shifts with `NOT_FILE_A`.
+
+### Sliding piece attacks
+
+Bishops, rooks, and queens are different — their attack sets depend on where other pieces are blocking them. A rook on A1 attacks all of the A-file when the board is empty, but only up to the first blocker when pieces are present. These can't be precomputed without knowing the occupancy.
+
+The approach here is straightforward ray casting: walk outward from the piece's square in each direction, setting bits as you go, until you walk off the board or hit a blocker. The blocker's square is included in the attack set (because it can be captured) and then the ray stops.
+
+```cpp
+inline uint64_t rookAttacksFrom(int from, uint64_t occupied){
+    int r = from / 8, f = from % 8;
+    uint64_t attacks = 0;
+
+    // North: increasing rank
+    for(int i = r + 1; i < 8; i++){
+        int shift = i*8 + f;
+        attacks |= 1ULL << shift;
+        if ((1ULL << shift) & occupied) break; // include blocker, then stop
+    }
+    // South, East, West follow the same pattern...
+    return attacks;
+}
+```
+
+This is called "classical" or "ray-casting" attack generation. It's not the fastest possible approach - most modern engines use magic bitboards, which encode the entire attack set for every square and every possible occupancy configuration into a lookup table indexed by a hash. But ray casting is intuitive and readable and fast enough for a first pass. Future work would be to extend the engine to use magic bitboards.
+
+# Pseudo-Legal Move Generation
+
+Pseudo-legal move generation produces all moves a piece could make ignoring whether they leave the king in check. Separating pseudo-legal from legal generation is the standard approach because it lets you generate moves cheaply in bulk and filter out the illegal ones in a separate, controlled step.
+### Pawns
+
+Pawns are the most complex piece to generate for because they have asymmetric movement, direction that depends on color, four different promotion pieces, en passant, and a special double push from the starting rank. The white and black cases are handled separately to keep the shift directions clear.
+
+For white, a single push is `(pawns << 8) & empty`. The `& empty` ensures pawns can't push through other pieces. A double push is `((oneStep & RANK_3) << 8) & empty` - first check that the one-step result lands on rank 3 (meaning the pawn started on rank 2), then push again. Captures go diagonally: left capture is `(pawns & NOT_FILE_A) << 7`, right is `(pawns & NOT_FILE_H) << 9`, then intersected with the enemy occupancy.
+
+```cpp
+// White one-step push
+uint64_t oneStep  = (pawns << 8) & empty;
+uint64_t quiet    = oneStep & ~RANK_8;     // non-promotion pushes
+uint64_t promo    = oneStep &  RANK_8;     // promotions
+uint64_t twoStep  = ((oneStep & RANK_3) << 8) & empty;
+
+// Captures
+uint64_t capLeft  = ((pawns & NOT_FILE_A) << 7) & blackOccupancy;
+uint64_t capRight = ((pawns & NOT_FILE_H) << 9) & blackOccupancy;
+```
 
