@@ -367,3 +367,306 @@ The make-and-verify approach is simple and correct. Its cost is one board copy a
 
 An empty move list from `generateMoves` means either checkmate or stalemate - distinguishable by calling `inCheck` on the result.
 
+# Verification with Perft
+
+Perft is a well known reliable way to know if your move generator is correct. It counts the total number of leaf nodes reachable from a given position at a given depth. The counts are well-known for standard positions and have been verified by dozens of independent engines over decades.
+
+The implementation is a simple recursive function: at depth 0, return 1. Otherwise generate all legal moves, make each on a copy, recurse, and accumulate.
+
+```cpp
+long long perft(Board& board, int depth){
+    if (depth == 0) return 1;
+
+    MoveGen gen(board);
+    auto moves = gen.generateMoves();
+    long long total = 0;
+
+    for (const Move& m : moves){
+        Board next = board;
+        next.makeMove(m);
+        total += perft(next, depth - 1);
+    }
+    return total;
+}
+```
+
+The standard starting position results are ([taken from the chess programming wiki](https://www.chessprogramming.org/Perft_Results)):
+
+|Depth|Nodes|
+|---|---|
+|1|20|
+|2|400|
+|3|8,902|
+|4|197,281|
+|5|4,865,609|
+|6|119,060,324|
+When a count is wrong, the standard debugging technique is "divide perft": print the count for each root move separately, compare against a known-good engine like Stockfish (which supports the `perft` command), and narrow down which move is generating the wrong number of nodes.
+
+# Evaluation
+
+The evaluation function assigns a numerical score to a position from the perspective of the side to move. Positive scores are good for the side to move; negative scores are bad. This is the static assessment the engine uses when it stops searching - at a leaf node, the evaluation tells the search how promising the position is.
+
+The evaluation here is extremely simple: material plus piece-square tables. No pawn structure, no king safety, no mobility. Simple evaluations are surprisingly competitive because the search tree compensates for a lot of what the evaluation misses - a deeper search with a simple eval often beats a shallow search with a complex eval. Both the material and PST tables values are taken from [chess programming wiki - simple evaluation function](https://www.chessprogramming.org/Simplified_Evaluation_Function).
+
+### Material values
+
+The piece values used are in centipawns (hundredths of a pawn), a standard unit in chess programming:
+
+|Piece|Value (cp)|
+|---|---|
+|Pawn|100|
+|Knight|320|
+|Bishop|330|
+|Rook|500|
+|Queen|900|
+|King|20,000|
+Note bishop (330) is valued slightly higher than knight (320). This reflects the general principle that bishops are slightly better than knights in open positions, though the difference is small. The king value (20,000) is chosen to be larger than any material gain the engine could calculate, ensuring the king is never traded.
+### Piece-square tables
+
+Material alone tells the engine that a queen is worth a queen regardless of where it sits. Piece-square tables add positional nuance by assigning a bonus or penalty to each piece depending on which square it occupies. The bonus is added to the material value.
+
+Piece-square tables encode human chess knowledge directly into the evaluation in the form of square bonuses. Rather than writing explicit rules ("knights should be in the centre", "rooks belong on open files"), you express the preference as a 64-entry table of bonuses and penalties.
+
+All six tables are defined as compile-time `constexpr` arrays in `eval.hpp`, written from black's perspective (A8 at index 0, H1 at index 63). For black pieces the table is indexed directly. For white pieces, the square is XOR'd with 56, which flips the board vertically so rank 1 maps to rank 8 and vice versa - making the same table work symmetrically for both colors.
+
+```cpp
+int Eval::evaluate(const Board& board){
+    int white{0}, black{0};
+
+    for (int p = PAWN; p <= KING; ++p){
+        uint64_t w = board.pieces[WHITE][p];
+        while (w){
+            int sq = popLSB(w);
+            white += PIECE_VALUES[p] + PST[p][sq ^ 56];  // flip to white perspective
+        }
+        uint64_t b = board.pieces[BLACK][p];
+        while (b){
+            int sq = popLSB(b);
+            black += PIECE_VALUES[p] + PST[p][sq];          // direct for black
+        }
+    }
+
+    int score = white - black;
+    return board.turn == WHITE ? score : -score;  // relative to side to move
+}
+```
+
+The final score is returned relative to the side to move, not always from white's perspective. This is the convention that negamax requires - more on that in the search section.
+
+# Search: Negamax and Alpha-Beta
+
+The search is the brain of the engine. Given a position, it looks ahead a fixed number of moves, evaluates the resulting positions, and works backwards to find the move that leads to the best outcome assuming both sides play optimally.
+
+### Minimax and the negamax formulation
+
+The fundamental algorithm is minimax: at each node, the maximising player picks the move with the highest score, and the minimising player picks the move with the lowest score. White wants to maximise; black wants to minimise.
+
+Negamax is an elegant reformulation: instead of tracking which side is maximising and which is minimising, every node maximises. The trick is that the score is always relative to the side to move, and when you recurse you negate the child's score. If a position is +300 for the side to move, it's -300 for the opponent. Recursing with `-negamax(next, depth-1, ...)` flips the perspective automatically.
+
+### Alpha-beta pruning
+
+Plain negamax is exponential in the branching factor. A chess position has roughly 30 legal moves on average, so depth 6 means 30^6 = 729 million nodes. Alpha-beta pruning eliminates branches that cannot possibly affect the result.
+
+The two parameters, `alpha` and `beta`, represent a window of scores that matter. Alpha is the best score the current player is already guaranteed to achieve from a parent node. Beta is the best score the opponent is already guaranteed - its a ceiling, because if the current position scores above beta, the opponent would never allow it to be reached in the first place.
+
+When a move scores above beta, we immediately stop searching this node. The opponent won't choose this line because they already have something better. This is the cutoff, and in well-ordered positions it severly reduces the effective branching factor.
+
+```cpp
+int Search::negamax(const Board& board, int depth, int alpha, int beta){
+    if (depth == 0) return Eval::evaluate(board);
+
+    MoveGen gen(board);
+    auto moves = gen.generateMoves();
+
+    if (moves.empty()){
+        if (board.inCheck(board.turn)) return -MATE_VAL - depth; // checkmate
+        return 0; // stalemate
+    }
+
+    int bestScore = -INF;
+    for(const Move& m : moves){
+        Board next = board;
+        next.makeMove(m);
+
+        int score = -negamax(next, depth - 1, -beta, -alpha);
+        bestScore  = std::max(bestScore, score);
+        alpha      = std::max(alpha, score);
+        if (alpha >= beta) break; // alpha-beta cutoff
+    }
+    return bestScore;
+}
+```
+
+### Mate scoring
+
+Checkmate scores use `-MATE_VAL - depth`. The subtraction of depth is important: it makes a faster checkmate score higher than a slower one. Without it, the engine would be indifferent between mating in 1 and mating in 10, and might play aimlessly once it "knows" it's winning.
+
+The mate value (900,000) is chosen to be larger than any material score the engine could compute, ensuring checkmate always dominates material considerations.
+
+### The root call
+
+`getBestMove` handles the search root separately from the recursive negamax. The root needs to track not just the best score but the actual best move, so it maintains a `bestMove` variable updated whenever a child score exceeds the current best.
+
+```cpp
+SearchResult Search::getBestMove(const Board& board, int depth){
+    MoveGen gen(board);
+    auto moves = gen.generateMoves();
+
+    Move bestMove;
+    int  bestScore{-INF};
+    int  alpha = -INF, beta = INF;
+
+    for(const auto& m : moves){
+        Board next = board;
+        next.makeMove(m);
+
+        int score = -negamax(next, depth - 1, -beta, -alpha);
+        if (score > bestScore){
+            bestMove  = m;
+            bestScore = score;
+        }
+        alpha = std::max(alpha, score);
+    }
+
+    return {bestMove, bestScore, nodes};
+}
+```
+
+# Move Ordering
+
+Alpha-beta pruning is only as good as the move ordering. The best case is searching the best move first every time. In the worst case - we always search the worst moves first - pruning thereby does nothing here. Move ordering is therefore one of the highest-leverage things you can do to improve search performance.
+
+The scoring heuristic prioritises moves in this order: promotion-captures, captures ordered by MVV-LVA, quiet promotions, and everything else scored zero. MVV-LVA (Most Valuable Victim, Least Valuable Attacker) is the key idea: prefer capturing a queen with a pawn over capturing a pawn with a queen, because the queen capture is more likely to be good.
+
+```cpp
+static int scoreMove(const Move& m, const Board& board){
+	// will be following 10 * victim_value - attacker_value to 
+	// prefer smaller valued pieces attacking larger values
+	// and adding larger values to promotion to prefer them
+	if (m.flags == EN_PASSANT)
+		return 10 * Eval::PIECE_VALUES[PAWN] - Eval::PIECE_VALUES[PAWN];
+
+	if (m.flags == CAPTURE || m.flags == PROMOTION_CAPTURE){
+		Piece victim = NO_PIECE;
+		uint64_t to = 1ULL << m.to;
+		Color defender = opposite(board.turn);
+		
+		// find the attacked piece
+		for(int p = PAWN ; p <= KING ; p++){
+			if (board.pieces[defender][p] & to){
+				victim = static_cast<Piece>(p);
+				break;
+			}
+		}
+
+		if (victim != NO_PIECE && m.flags == CAPTURE)
+			return 10*Eval::PIECE_VALUES[victim] - Eval::PIECE_VALUES[m.piece];
+
+		if (victim != NO_PIECE && m.flags == PROMOTION_CAPTURE)
+			return 10000 + 10*Eval::PIECE_VALUES[victim] - Eval::PIECE_VALUES[m.piece];
+
+	}
+
+	if (m.flags == PROMOTION)
+		return 8000 + Eval::PIECE_VALUES[m.promotionPiece];
+
+	return 0;
+}
+
+```
+
+The formula `10 * victim_value - attacker_value` ensures that among all captures of a given victim, we prefer the cheapest attacker. Multiplying the victim by 10 means a pawn capturing a queen ranks far above a queen capturing a pawn, for example. The numbers work out so any capture of a more valuable piece by a less valuable piece scores positively.
+
+Moves are sorted with `std::sort` before the main loop in negamax for efficient and quick pruning.
+
+# The UCI Protocol
+
+UCI (Universal Chess Interface) is the standard protocol that lets a chess engine communicate with a GUI like Cutechess, Arena, or Lichess's bot infrastructure. The protocol is text-based over stdin/stdout: the GUI sends commands, the engine replies. The engine runs in its own process; the GUI manages the clock and display.
+
+### The handshake
+
+When the GUI connects, it sends `uci`. The engine replies with its name, author, and `uciok`. The GUI then sends `isready`, and the engine replies `readyok` once it's done initialising. The main loop just reads lines and dispatches based on the command token.
+
+```cpp
+while(std::getline(std::cin, line)){
+    std::istringstream args(line);
+    std::string cmd;
+    args >> cmd;
+
+    if      (cmd == "uci")       { std::cout << "id name Chess Engine\n"
+                                             << "id author r4hulrr\n"
+                                             << "uciok\n"; }
+    else if (cmd == "isready")  { std::cout << "readyok\n"; }
+    else if (cmd == "position") { handlePosition(board, args); }
+    else if (cmd == "go")       { handleGo(board, args); }
+    else if (cmd == "quit")     { break; }
+}
+```
+
+The `position` command tells the engine what position to search. It comes in two forms: `position startpos moves e2e4 e7e5 ...`which sets up the starting position and then applies a sequence of moves, and `position fen <fen_string> moves ...` which sets up from a FEN string. This engine currently only handles `startpos`; FEN parsing is straightforward to add later.
+
+Applying the move list works by generating all legal moves and finding the one that matches the `from`/`to`/`promotion` in the token.
+
+```cpp
+bool applyMove(Board& board, const std::string& token){
+    int from  = parseSquare(token.substr(0, 2));
+    int to    = parseSquare(token.substr(2, 2));
+    Piece promo = (token.size() >= 5) ? parsePromo(token[4]) : QUEEN;
+
+    MoveGen gen(board);
+    for (const Move& m : gen.generateMoves()){
+        if (m.from != from || m.to != to) continue;
+        if ((m.flags == PROMOTION || m.flags == PROMOTION_CAPTURE)
+            && m.promotionPiece != promo) continue;
+        board.makeMove(m);
+        return true;
+    }
+    return false;
+}
+```
+
+### The go command
+
+The `go` command tells the engine to start searching. The most common form for a real game is `go wtime 60000 btime 60000 winc 500 binc 500`, giving remaining clock times and increments in milliseconds. The engine parses these and allocates a time budget before calling the search.
+
+The engine currently only accepts `go depth N` for a fixed-depth search, which is how it was first tested - it's the simplest form and useful for perft and capable of playing matches. The output is a required `info` line (which the GUI uses to show depth, score, and principal variation) followed by `bestmove`.
+
+```cpp
+void handleGo(Board& board, std::istringstream& args){
+	std::string token;
+	int depth{8};
+	
+	// only handling depth for now
+	while(args >> token){
+		if (token == "depth") args >> depth;
+	}
+
+	Search s;
+	SearchResult result = s.getBestMove(board, depth);
+
+	std::cout << "info depth " << depth
+		<< " score cp "  << result.bestScore
+		<< " nodes "     << result.nodes
+		<< " pv "        << moveName(result.bestMove)
+		<< "\n";
+
+	std::cout << "bestmove " << moveName(result.bestMove) << "\n";
+}
+```
+
+**One important detail**
+The UCI spec requires `std::cout << std::unitbuf` at startup. Without it, stdout may be buffered and the GUI will hang waiting for output that has been written but not flushed. 
+
+# What comes next
+
+The engine as described is complete and playable. It correctly generates all legal moves, evaluates positions with material and piece-square bonuses, searches with negamax and alpha-beta pruning, and communicates via UCI. We can hook it up to a GUI like cutechess and play against it.
+
+The natural next improvements, roughly in order of impact, are:
+
+- quiescence search
+- iterative deepening 
+- adding time management to UCI (allocate a per-move budget from the remaining clock)
+- a transposition table 
+- and eventually magic bitboards for faster move generation at deeper depths.
+
+Each of these is a substantial improvement on its own. The engine described here is a solid foundation for all of them - the architecture is clean enough that each feature can be added in isolation, and will be added in v2.
